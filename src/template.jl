@@ -103,14 +103,14 @@ defaultkw(::Val{:manifest}) = false
 defaultkw(::Val{:git}) = true
 defaultkw(::Val{:develop}) = true
 defaultkw(::Val{:plugins}) = Plugin[]
-        function defaultkw(::Val{:authors})
-            name = LibGit2.getconfig("user.name", "")
-            email = LibGit2.getconfig("user.email", "")
-            isempty(name) && return ""
-            author = name * " "
-            isempty(email) || (author *= "<$email>")
-            return strip(author)
-        end
+function defaultkw(::Val{:authors})
+    name = LibGit2.getconfig("user.name", "")
+    email = LibGit2.getconfig("user.email", "")
+    isempty(name) && return ""
+    author = name * " "
+    isempty(email) || (author *= "<$email>")
+    return strip(author)
+end
 
 function Base.show(io::IO, t::Template)
     println(io, "Template:")

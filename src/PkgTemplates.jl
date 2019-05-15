@@ -41,7 +41,8 @@ include("plugin.jl")
 include("utils.jl")
 include("interactive.jl")
 include(joinpath("plugins", "generated.jl"))
-include(joinpath("plugins", "documenter.jl"))
+include(joinpath("plugins", "citation.jl"))
+oinclude(joinpath("plugins", "documenter.jl"))
 
 const BADGE_ORDER = [
     Documenter{GitLabCI},
