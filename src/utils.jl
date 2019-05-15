@@ -102,3 +102,11 @@ function padtail(s::AbstractString, pad::AbstractString)
     pushfirst!(lines, hd)
     return join(lines, "\n")
 end
+
+# Format a version in a way suitable for a Project.toml file.
+function repr_version(v::VersionNumber)
+    s = string(v.major)
+    v.minor == 0 || (s *= ".$(v.minor)")
+    v.patch == 0 || (s *= ".$(v.patch)")
+    return repr(s)
+end

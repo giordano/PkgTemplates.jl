@@ -15,6 +15,23 @@ repeatable, and customizable way.**
 pkg> add PkgTemplates
 ```
 
+## Plugins
+
+`PkgTemplates` is based on plugins which handle the setup of individual package components.
+The available plugins are:
+
+* Continuous Integration (CI)
+  * [Travis CI](https://travis-ci.com) (Linux, MacOS)
+  * [AppVeyor](https://appveyor.com) (Windows)
+  * [GitLabCI](https://gitlab.com) (Linux)
+  * [CirrusCI](https://cirrus-ci.org) (FreeBSD)
+* Code Coverage
+  * [Codecov](https://codecov.io)
+  * [Coveralls](https://coveralls.io)
+* Documentation
+  * [GitHubPages](https://pages.github.com)
+* Citation
+
 ## Usage
 
 ```@setup usage
@@ -53,8 +70,10 @@ t = Template(;
     plugins=[
         TravisCI(),
         Codecov(),
+        Citation(),
         Coveralls(),
         AppVeyor(),
+        CirrusCI(),
         Documenter{TravisCI}(),
     ],
 )

@@ -20,11 +20,14 @@ export
     AppVeyor,
     TravisCI,
     GitLabCI,
+    CirrusCI,
     Codecov,
-    Coveralls
+    Coveralls,
+    Citation
 
-# Belongs in utils, but Template docstring uses it.
+# These belong in utils, but the Template docstring uses them.
 tilde(path::AbstractString) = replace(path, homedir() => "~")
+default_version() = VersionNumber(VERSION.major)
 
 """
 A plugin to be added to a [`Template`](@ref), which adds some functionality or integration.

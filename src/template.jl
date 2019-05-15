@@ -20,8 +20,9 @@ Records common information used to generate a package.
   it will take the value of of the global git config's value if it is left unset.
 * `dir::AbstractString=$(tilde(Pkg.devdir()))`: Directory in which the package will go.
   Relative paths are converted to absolute ones at template creation time.
-* `julia_version::VersionNumber=$VERSION`: Minimum allowed Julia version.
-* `ssh::Bool=false`: Whether or not to use SSH for the remote.
+* `julia_version::VersionNumber=$(default_version())`: Minimum allowed Julia version.
+* `ssh::Bool=false`: Whether or not to use SSH for the git remote. If `false`, HTTPS will
+  be used.
 * `manifest::Bool=false`: Whether or not to commit the `Manifest.toml`.
 * `git::Bool=true`: Whether or not to create a Git repository for generated packages.
 * `develop::Bool=true`: Whether or not to `develop` generated packages in the active
@@ -46,8 +47,6 @@ struct Template
     develop::Bool
     plugins::Dict{DataType, <:Plugin}
 end
-
-Template(; interactive::Bool=false, kwargs...) = make_template(Val(interactive); kwargs...)
 
 function make_template(::Val{false}; kwargs...)
     user = getkw(kwargs, :user)
@@ -97,14 +96,21 @@ defaultkw(s::Symbol) = defaultkw(Val(s))
 defaultkw(::Val{:user}) = LibGit2.getconfig("github.user", "")
 defaultkw(::Val{:host}) = "https://github.com"
 defaultkw(::Val{:license}) = "MIT"
-defaultkw(::Val{:authors}) = LibGit2.getconfig("user.name", "")
 defaultkw(::Val{:dir}) = Pkg.devdir()
-defaultkw(::Val{:julia_version}) = VERSION
+defaultkw(::Val{:julia_version}) = default_version()
 defaultkw(::Val{:ssh}) = false
 defaultkw(::Val{:manifest}) = false
 defaultkw(::Val{:git}) = true
 defaultkw(::Val{:develop}) = true
 defaultkw(::Val{:plugins}) = Plugin[]
+        function defaultkw(::Val{:authors})
+            name = LibGit2.getconfig("user.name", "")
+            email = LibGit2.getconfig("user.email", "")
+            isempty(name) && return ""
+            author = name * " "
+            isempty(email) || (author *= "<$email>")
+            return strip(author)
+        end
 
 function Base.show(io::IO, t::Template)
     println(io, "Template:")

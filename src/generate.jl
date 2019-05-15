@@ -16,10 +16,18 @@ function generate(pkg::AbstractString, t::Template)
         # Create the directory with some boilerplate inside.
         Pkg.generate(pkg_dir)
 
-        # Replace the UUID with something that's compatible with METADATA.
-        project = joinpath(pkg_dir, "Project.toml")
-        uuid = string(Pkg.METADATA_compatible_uuid(pkg))
-        write(project, replace(read(project, String), r"uuid = .*" => "uuid = \"$uuid\""))
+        # Add a [compat] section for Julia.
+        open(joinpath(pkg_dir, "Project.toml"), "a") do io
+            println(io, "\n[compat]\njulia = $(repr_version(t.julia_version))")
+        end
+
+        # Replace the authors field with the template's authors.
+        if !isempty(t.authors)
+            path = joinpath(pkg_dir, "Project.toml")
+            project = read(path, String)
+            authors = string("[", join(map(repr ∘ strip, split(t.authors, ",")), ", "), "]")
+            write(path, replace(project, r"authors = .*" => "authors = $authors"))
+        end
 
         if t.git
             # Initialize the repo.
@@ -40,7 +48,6 @@ function generate(pkg::AbstractString, t::Template)
 
         # Generate the files.
         gen_tests(t, pkg_dir)
-        gen_require(t, pkg_dir)
         gen_readme(t, pkg_dir)
         gen_license(t, pkg_dir)
         gen_gitignore(t, pkg_dir)
@@ -82,11 +89,6 @@ function make_tests(t::Template, pkg_dir::AbstractString)
     return [(joinpath(pkg_dir, "test", "runtests.jl"), text)]
 end
 
-function make_require(t::Template, pkg_dir::AbstractString)
-    text = "julia $(version_floor(t.julia_version))"
-    return [(joinpath(pkg_dir, "REQUIRE"), text)]
-end
-
 function make_readme(t::Template, pkg_dir::AbstractString)
     pkg = basename(pkg_dir)
     text = "# $pkg\n"
@@ -102,6 +104,10 @@ function make_readme(t::Template, pkg_dir::AbstractString)
     foreach(setdiff(keys(t.plugins), done)) do T
         text *= "\n" * join(badges(t.plugins[T], t.user, pkg), "\n")
     end
+    if haskey(t.plugins, Citation) && t.plugins[Citation].readme_section
+        text *= "\n## Citing\n\nSee `CITATION.bib` for the relevant reference(s).\n"
+    end
+
 
     return [(joinpath(pkg_dir, "README.md"), text)]
 end
