@@ -49,7 +49,7 @@ view(p::GeneratedPlugin) = p.view
 
 Generate a basic plugin which manages a single configuration file.
 
-# Arguments
+## Arguments
 * `T`: The name of the plugin to generate.
 * `src => dest`: Defines the plugin's configuration file. The key is the path to the
   default configuration file, or `nothing` if the default is no file. The value is the
@@ -57,7 +57,7 @@ Generate a basic plugin which manages a single configuration file.
 * `attr::type[=default]...`: Extra attributes for the generated plugin. They are exposed
   via keyword arguments (optional if a default is provided, otherwise not).
 
-# Keyword Arguments
+## Keyword Arguments
 * `gitignore=String[]`: List of patterns to be added to the `.gitignore` of generated
   packages. Can also be a single string.
 * `badges=Badge[]`: List of [`Badge`](@ref)s to be added to the `README.md` of generated
@@ -127,14 +127,14 @@ end
 function Base.show(io::IO, p::GeneratedPlugin)
     T = nameof(typeof(p))
     src = source(p)
-    cfg = src === nothing ? "no file" : tilde(src)
+    cfg = src === nothing ? "no file" : contractuser(src)
     print(io, "$T: Configured with $cfg")
 end
 
 function Base.repr(p::GeneratedPlugin)
     T = nameof(typeof(p))
     src = source(p)
-    cfg = src === nothing ? "nothing" : repr(tilde(src))
+    cfg = src === nothing ? "nothing" : repr(contractuser(src))
     return "$T($cfg)"
 end
 
@@ -144,7 +144,7 @@ end
 Container for Markdown badge data. Each argument can contain placeholders to be filled in
 by [`substitute`](@ref).
 
-# Arguments
+## Arguments
 * `hover::AbstractString`: Text to appear when the mouse is hovered over the badge.
 * `image::AbstractString`: URL to the image to display.
 * `link::AbstractString`: URL to go to upon clicking the badge.

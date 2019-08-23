@@ -44,7 +44,7 @@ write(test_file, template_text)
     @test t.license == "MIT"
     @test t.authors == "foo"
     @test t.dir == default_dir
-    @test t.julia_version == PkgTemplates.default_version()
+    @test t.julia_version == PkgTemplates.default_version
     @test !t.ssh
     @test !t.manifest
     @test isempty(t.plugins)
@@ -107,7 +107,7 @@ end
 
 @testset "Show methods" begin
     pkg_dir = replace(default_dir, homedir() => "~")
-    ver = PkgTemplates.version_floor(PkgTemplates.default_version())
+    ver = PkgTemplates.version_floor(PkgTemplates.default_version)
     buf = IOBuffer()
     t = Template(; user=me, authors="foo")
     show(buf, t)

@@ -1,38 +1,33 @@
 """
-    Template(; kwargs...) -> Template
+    Template(interactive::Bool=false; kwargs...) -> Template
 
 Records common information used to generate a package.
 
-# Keyword Arguments
-* `user::AbstractString=""`: GitHub (or other code hosting service) username. If left
-  unset, it will take the the global git config's value (`github.user`). If that is not
-  set, an `ArgumentError` is thrown. **This is case-sensitive for some plugins, so take
-  care to enter it correctly.**
-* `host::AbstractString="github.com"`: URL to the code hosting service where your package
-  will reside. Note that while hosts other than GitHub won't cause errors, they are not
-  officially supported and they will cause certain plugins will produce incorrect output.
-* `license::AbstractString="MIT"`: Name of the package license. If an empty string is
-  given, no license is created. [`available_licenses`](@ref) can be used to list all
-  available licenses, and [`show_license`](@ref) can be used to print out a particular
-  license's text.
-* `authors::Union{AbstractString, Vector{<:AbstractString}}=""`: Names that appear on the
-  license. Supply a string for one author or an array for multiple. Similarly to `user`,
-  it will take the value of of the global git config's value if it is left unset.
-* `dir::AbstractString=$(tilde(Pkg.devdir()))`: Directory in which the package will go.
+## Keyword Arguments
+* `user::AbstractString=""`: GitHub (or other code hosting service) username.
+  If left unset, it will take the the global Git config's value (`github.user`).
+  If that is not set, an `ArgumentError` is thrown.
+  This is case-sensitive for some plugins, so take care to enter it correctly!
+* `host::AbstractString="github.com"`: URL to the code hosting service where your package will reside.
+  Note that while hosts other than GitHub won't cause errors, they are not officially supported and they will cause certain plugins will produce incorrect output.
+* `license::AbstractString="MIT"`: Name of the package license.
+  If an empty string is given, no license is created.
+  See [`available_licenses`](@ref) to list all available licenses, and [`show_license`](@ref) to read a particular license.
+* `authors::Union{AbstractString, Vector{<:AbstractString}}=""`: Names that appear on the license.
+  Supply a string for one author or an array for multiple.
+  Similarly to `user`, it will take the value of of the global Git config's value if it is left unset.
+* `dir::AbstractString=$(contractuser(Pkg.devdir()))`: Directory in which the package will go.
   Relative paths are converted to absolute ones at template creation time.
-* `julia_version::VersionNumber=$(default_version())`: Minimum allowed Julia version.
+* `julia_version::VersionNumber=$default_version`: Minimum allowed Julia version.
 * `ssh::Bool=false`: Whether or not to use SSH for the git remote. If `false` HTTPS will be used.
-* `dev::Bool=true`: Whether or not to `Pkg.develop` generated packages.
 * `manifest::Bool=false`: Whether or not to commit the `Manifest.toml`.
 * `git::Bool=true`: Whether or not to create a Git repository for generated packages.
-* `develop::Bool=true`: Whether or not to `develop` generated packages in the active
-  environment.
-* `plugins::Vector{<:Plugin}=Plugin[]`: A list of plugins that the
-  package will include.
+* `develop::Bool=true`: Whether or not to `develop` generated packages in the active environment.
+* `plugins::Vector{<:Plugin}=Plugin[]`: A list of plugins that the package will include.
 * `interactive::Bool=false`: When set, creates the template interactively from user input,
   using the previous keywords as a starting point.
-* `fast::Bool=false`: Only applicable when `interactive` is set. Skips prompts for any
-  unsupplied keywords except `user` and `plugins`.
+* `fast::Bool=false`: Only applicable when `interactive` is set.
+  Skips prompts for any unsupplied keywords except `user` and `plugins`.
 """
 struct Template
     user::String
@@ -48,6 +43,8 @@ struct Template
     develop::Bool
     plugins::Dict{DataType, <:Plugin}
 end
+
+Template(; interactive::Bool=false, kwargs...) = make_template(Val(interactive); kwargs...)
 
 function make_template(::Val{false}; kwargs...)
     user = getkw(kwargs, :user)
@@ -98,7 +95,7 @@ defaultkw(::Val{:user}) = LibGit2.getconfig("github.user", "")
 defaultkw(::Val{:host}) = "https://github.com"
 defaultkw(::Val{:license}) = "MIT"
 defaultkw(::Val{:dir}) = Pkg.devdir()
-defaultkw(::Val{:julia_version}) = default_version()
+defaultkw(::Val{:julia_version}) = default_version
 defaultkw(::Val{:ssh}) = false
 defaultkw(::Val{:manifest}) = false
 defaultkw(::Val{:git}) = true
@@ -125,7 +122,7 @@ function Base.show(io::IO, t::Template)
         println(io, t.license, " ($(t.authors) ", year(today()), ")")
     end
 
-    println(io, HALFTAB, ARROW, "Package directory: ", tilde(maybe_string(t.dir)))
+    println(io, HALFTAB, ARROW, "Package directory: ", contractuser(maybe_string(t.dir)))
     println(io, HALFTAB, ARROW, "Minimum Julia version: v", version_floor(t.julia_version))
     println(io, HALFTAB, ARROW, "SSH remote: ", yesno(t.ssh))
     println(io, HALFTAB, ARROW, "Commit Manifest.toml: ", yesno(t.manifest))

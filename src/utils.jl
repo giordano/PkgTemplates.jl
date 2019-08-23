@@ -15,7 +15,7 @@ default_file(paths::AbstractString...) = joinpath(DEFAULTS_DIR, paths...)
 
 Create a new file containing some given text. Always ends the file with a newline.
 
-# Arguments
+## Arguments
 * `file::AbstractString`: Path to the file to be created.
 * `text::AbstractString`: Text to write to the file.
 """
@@ -50,7 +50,7 @@ end
 Replace placeholders in `template` via
 [`Mustache`](https://github.com/jverzani/Mustache.jl). `template` is not modified.
 
-# Arguments
+## Arguments
 * `template::AbstractString`: Template string with placeholders to be replaced.
 * `pkg_template::Template`: When supplied, adds some default replacements.
 * `view::Dict{String, Any}`: When supplied, adds more replacements.

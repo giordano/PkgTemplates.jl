@@ -130,7 +130,7 @@ function prompt_config(T::Type{<:GeneratedPlugin})
     s = "$(nameof(T)): Config template filename"
     default = source(T)
     default === nothing && (s *= " (\"None\" for no file)")
-    answer = prompt_string(s, default === nothing ? "None" : tilde(default))
+    answer = prompt_string(s, default === nothing ? "None" : contractuser(default))
 
     return if lowercase(answer) == "none"
         nothing

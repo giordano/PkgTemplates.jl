@@ -1,5 +1,6 @@
 module PkgTemplates
 
+using Base.Filesystem: contractuser
 using Dates
 using InteractiveUtils
 using LibGit2
@@ -25,9 +26,7 @@ export
     Coveralls,
     Citation
 
-# These belong in utils, but the Template docstring uses them.
-tilde(path::AbstractString) = replace(path, homedir() => "~")
-default_version() = VersionNumber(VERSION.major)
+const default_version = VersionNumber(VERSION.major)
 
 """
 A plugin to be added to a [`Template`](@ref), which adds some functionality or integration.
@@ -42,7 +41,7 @@ include("utils.jl")
 include("interactive.jl")
 include(joinpath("plugins", "generated.jl"))
 include(joinpath("plugins", "citation.jl"))
-oinclude(joinpath("plugins", "documenter.jl"))
+include(joinpath("plugins", "documenter.jl"))
 
 const BADGE_ORDER = [
     Documenter{GitLabCI},
