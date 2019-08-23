@@ -21,8 +21,8 @@ Records common information used to generate a package.
 * `dir::AbstractString=$(tilde(Pkg.devdir()))`: Directory in which the package will go.
   Relative paths are converted to absolute ones at template creation time.
 * `julia_version::VersionNumber=$(default_version())`: Minimum allowed Julia version.
-* `ssh::Bool=false`: Whether or not to use SSH for the git remote. If `false`, HTTPS will
-  be used.
+* `ssh::Bool=false`: Whether or not to use SSH for the git remote. If `false` HTTPS will be used.
+* `dev::Bool=true`: Whether or not to `Pkg.develop` generated packages.
 * `manifest::Bool=false`: Whether or not to commit the `Manifest.toml`.
 * `git::Bool=true`: Whether or not to create a Git repository for generated packages.
 * `develop::Bool=true`: Whether or not to `develop` generated packages in the active
@@ -42,6 +42,7 @@ struct Template
     dir::String
     julia_version::VersionNumber
     ssh::Bool
+    dev::Bool
     manifest::Bool
     git::Bool
     develop::Bool
@@ -117,7 +118,7 @@ function Base.show(io::IO, t::Template)
     println(io, HALFTAB, ARROW, "User: ", maybe_string(t.user))
     println(io, HALFTAB, ARROW, "Host: ", maybe_string(t.host))
 
-    print(io, HALFTAB, "→ License: ")
+    print(io, HALFTAB, ARROW, "License: ")
     if isempty(t.license)
         println(io, "None")
     else
