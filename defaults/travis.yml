@@ -1,35 +1,39 @@
-# Documentation: http://docs.travis-ci.com/user/languages/julia/
+# Documentation: http://docs.travis-ci.com/user/languages/julia
 language: julia
+notifications:
+  email: false
 os:
-  - linux
-  - osx
+{{#OS}}
+  - {{.}}
+{{/OS}}
 julia:
-  - {{VERSION}}
-  - nightly
+{{#VERSIONS}}
+  - {{.}}
+{{/VERSIONS}}
+{{#HAS_NIGHTLY}}
 matrix:
   allow_failures:
     - julia: nightly
   fast_finish: true
-notifications:
-  email: false
-{{#COVERAGE}}
+{{/HAS_NIGHTLY}}
+{{#HAS_COVERAGE}}
 after_success:
-{{#CODECOV}}
+{{#HAS_CODECOV}}
   - julia -e '
       using Pkg
       Pkg.add("Coverage")
       using Coverage
       Codecov.submit(process_folder())'
-{{/CODECOV}}
-{{#COVERALLS}}
+{{/HAS_CODECOV}}
+{{#HAS_COVERALLS}}
   - julia -e '
       using Pkg
       Pkg.add("Coverage")
       using Coverage
       Coveralls.submit(process_folder())'
-{{/COVERALLS}}
-{{/COVERAGE}}
-{{#GH_PAGES}}
+{{/HAS_COVERALLS}}
+{{/HAS_COVERAGE}}
+{{#HAS_DOCUMENTER}}
 jobs:
   include:
     - stage: Documentation
@@ -40,4 +44,4 @@ jobs:
           Pkg.instantiate()
           include("docs/make.jl")'
       after_success: skip
-{{/GH_PAGES}}
+{{/HAS_DOCUMENTER}}

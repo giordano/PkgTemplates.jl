@@ -1,40 +1,33 @@
 """
-    view(p::Plugin) -> Dict{String, Any}
+    view(::BasicPlugin, ::Template) -> Dict{String, Any}
 
 Return extra substitutions to be made for this plugin.
-See [`substitute`](@ref) for more details.
 """
-view(::Plugin) = Dict{String, Any}()
+view(::BasicPlugin, ::Template) = Dict{String, Any}()
 
 """
-    gitignore(p::Plugin) -> Vector{String}
+    gitignore(::Plugin, ::Template) -> Vector{String}
 
-Return patterns that should be added to generated packages' `.gitignore` files.
+Return patterns that should be added to `.gitignore`.
 """
-gitignore(::Plugin) = String[]
+gitignore(::BasicPlugin, ::Template) = String[]
 
 """
-    badges(p::Plugin) -> Vector{Badge}
+    badges(::BasicPlugin, ::Template) -> Union{Badge, Vector{Badge}}
 
-Return a list of [`Badge`](@ref)s to be added to generated packages' `README.md` files.
+Return a list of [`Badge`](@ref)s, or just one, to be added to `README.md`.
 """
 badges(::Plugin) = Badge[]
 
 """
-A plugin which has been generated with [`@plugin`](@ref).
-You should not manually create subtypes!
-"""
-abstract type GeneratedPlugin <: Plugin end
-
-"""
-    source(p::GeneratedPlugin) -> Union{String, Nothing}
+    source(::BasicPlugin, ::Template) -> Union{String, Nothing}
 
 Return the path to a plugin's configuration file, or `nothing` to indicate no file.
 """
-source(p::GeneratedPlugin) = p.src
+source(::BasicPlugin) = nothing
 
 """
-    destination(p::GeneratedPlugin) -> String
+    destination(::BasicPlugin, ::Template) -> Union{String, Nothing}
 
 Return the destination, relative to the package root, of a plugin's configuration file.
 """
@@ -45,104 +38,10 @@ badges(p::GeneratedPlugin) = p.badges
 view(p::GeneratedPlugin) = p.view
 
 """
-    @plugin T src => dest attr::type[=default]... opts...
-
-Generate a basic plugin which manages a single configuration file.
-
-## Arguments
-* `T`: The name of the plugin to generate.
-* `src => dest`: Defines the plugin's configuration file. The key is the path to the
-  default configuration file, or `nothing` if the default is no file. The value is the
-  destination path, relative to the root of generated packages.
-* `attr::type[=default]...`: Extra attributes for the generated plugin. They are exposed
-  via keyword arguments (optional if a default is provided, otherwise not).
-
-## Keyword Arguments
-* `gitignore=String[]`: List of patterns to be added to the `.gitignore` of generated
-  packages. Can also be a single string.
-* `badges=Badge[]`: List of [`Badge`](@ref)s to be added to the `README.md` of generated
-  packages. Can also be a single badge.
-* `view=Dict()`: Key-value pairs representing additional substitutions to be made in both
-  the plugin's badges and its configuration file. See [`substitute`](@ref) for details.
-"""
-macro plugin(T, src_dest, exs...)
-    src, dest = eval.(src_dest.args[2:3])
-
-    attrs = Expr[]  # Attribute expressions, e.g. x::Bool.
-    kws = Expr[]  # Keyword expressions, e.g. x::Bool or x::Bool=true.
-    names = Symbol[]  # Attribute names, e.g. x.
-    opts = Dict(:gitignore => [], :badges => [], :view => ())
-
-    for ex in exs
-        if ex.head === :(::)
-            # Extra attribute with no default (mandatory keyword).
-            push!(attrs, ex)
-            push!(kws, ex)
-            push!(names, ex.args[1])
-        elseif ex.head === :(=)
-            if ex.args[1] isa Symbol
-                # Plugin option.
-                opts[ex.args[1]] = eval(ex.args[2])
-            else
-                # Extra attribute with a default argument.
-                push!(attrs, ex.args[1])
-                push!(kws, Expr(:kw, ex.args[1], ex.args[2]))
-                push!(names, ex.args[1].args[1])
-            end
-        else
-            throw(ArgumentError(repr(ex)))
-        end
-    end
-
-    gitignore = opts[:gitignore] isa Vector ? opts[:gitignore] : [opts[:gitignore]]
-    gitignore = convert(Vector{String}, gitignore)
-    badges = opts[:badges] isa Vector ? opts[:badges] : [opts[:badges]]
-    badges = convert(Vector{Badge}, badges)
-    view = Dict(opts[:view])
-
-    quote
-        Base.@__doc__ struct $T <: GeneratedPlugin
-            src::Union{String, Nothing}
-            dest::String
-            gitignore::Vector{String}
-            badges::Vector{Badge}
-            view::Dict{String, Any}
-            $(attrs...)
-
-            function $(esc(T))(file::Union{AbstractString, Nothing}=$src; $(map(esc, kws)...))
-                if file !== nothing
-                    file = abspath(expanduser(file))
-                    if !isfile(file)
-                        throw(ArgumentError("File $file does not exist"))
-                    end
-                end
-                return new(file, $dest, $gitignore, $badges, $view, $(map(esc, names)...))
-            end
-        end
-
-        PkgTemplates.source(::Type{$(esc(T))}) = $src
-    end
-end
-
-function Base.show(io::IO, p::GeneratedPlugin)
-    T = nameof(typeof(p))
-    src = source(p)
-    cfg = src === nothing ? "no file" : contractuser(src)
-    print(io, "$T: Configured with $cfg")
-end
-
-function Base.repr(p::GeneratedPlugin)
-    T = nameof(typeof(p))
-    src = source(p)
-    cfg = src === nothing ? "nothing" : repr(contractuser(src))
-    return "$T($cfg)"
-end
-
-"""
     Badge(hover::AbstractString, image::AbstractString, link::AbstractString) -> Badge
 
-Container for Markdown badge data. Each argument can contain placeholders to be filled in
-by [`substitute`](@ref).
+Container for Markdown badge data.
+Each argument can contain placeholders.
 
 ## Arguments
 * `hover::AbstractString`: Text to appear when the mouse is hovered over the badge.
@@ -155,17 +54,13 @@ struct Badge
     link::String
 end
 
-Base.show(io::IO, b::Badge) = print(io, "[![$(b.hover)]($(b.image))]($(b.link))")
-
 # Format a plugin's badges as a list of strings, with all substitutions applied.
-function badges(p::Plugin, user::AbstractString, pkg_name::AbstractString)
-    # Give higher priority to replacements defined in the plugin's view.
-    subs = merge(Dict("USER" => user, "PKGNAME" => pkg_name), view(p))
+badges(p::Plugin, t::Template, pkg_name::AbstractString) = map(b -> render_template(string(b))
     return map(b -> substitute(string(b), subs), badges(p))
 end
 
 """
-    gen_plugin(p::Plugin, t::Template, pkg_name::AbstractString) -> Vector{String}
+    gen_plugin(p::Plugin, t::Template, pkg_name::AbstractString) -> Nothing
 
 Generate any files associated with a plugin.
 
@@ -173,13 +68,12 @@ Generate any files associated with a plugin.
 * `p::Plugin`: Plugin whose files are being generated.
 * `t::Template`: Template configuration.
 * `pkg_name::AbstractString`: Name of the package.
-
-Returns an array of generated file/directory names.
 """
-gen_plugin(::Plugin, ::Template, ::AbstractString) = String[]
+gen_plugin(::Plugin, ::Template, ::AbstractString) = nothing
 
-function gen_plugin(p::GeneratedPlugin, t::Template, pkg_name::AbstractString)
-    source(p) === nothing && return String[]
+function gen_plugin(p::BasicPlugin, t::Template, pkg::AbstractString)
+    source(p) === nothing && return
+    text = render_template(t, source(p), view(p))
     text = substitute(
         read(source(p), String),
         t,

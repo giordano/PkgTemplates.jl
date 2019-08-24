@@ -8,7 +8,7 @@ Generate a package named `pkg` from `t`.
 """
 generate(t::Template, pkg::AbstractString) = generate(pkg, t)
 function generate(pkg::AbstractString, t::Template)
-    pkg = splitjl(pkg)
+    endswith(pkg, ".jl") && (pkg = pkg[1:end-3])
     pkg_dir = joinpath(t.dir, pkg)
     ispath(pkg_dir) && throw(ArgumentError("$pkg_dir already exists"))
 

@@ -29,8 +29,8 @@ end
 """
     version_floor(v::VersionNumber=VERSION) -> String
 
-Format the given Julia `version` as `"major.minor"` for the most recent release version
-relative to `v`. For prereleases with `v.minor == v.patch == 0`, returns `"major.minor-"`.
+Format the given Julia `version` as `"major.minor"` for the most recent release version relative to `v`.
+For prereleases with `v.minor == v.patch == 0`, returns `"major.minor-"`.
 """
 function version_floor(v::VersionNumber=VERSION)
     return if isempty(v.prerelease) || v.patch > 0
@@ -47,8 +47,7 @@ end
         [view::Dict{String, Any},]
     ) -> String
 
-Replace placeholders in `template` via
-[`Mustache`](https://github.com/jverzani/Mustache.jl). `template` is not modified.
+Replace placeholders in `template` via [`Mustache`](https://github.com/jverzani/Mustache.jl).
 
 ## Arguments
 * `template::AbstractString`: Template string with placeholders to be replaced.
@@ -88,11 +87,8 @@ function substitute(
     return substitute(template, merge(d, view))
 end
 
-# Remove the trailing ".jl" from a package name.
-splitjl(pkg::AbstractString) = endswith(pkg, ".jl") ? pkg[1:end-3] : pkg
-
 # Get a list of all non-abstract subtypes of some type.
-leaves(T::Type) = isabstracttype(T) ? vcat(leaves.(subtypes(T))...) : [T]
+leaves(T::Type) = isabstracttype(T) ? vcat(map(leaves, subtypes(T))...) : [T]
 
 # Pad all lines but the first to be level with the first.
 function padtail(s::AbstractString, pad::AbstractString)
@@ -105,8 +101,12 @@ end
 
 # Format a version in a way suitable for a Project.toml file.
 function repr_version(v::VersionNumber)
-    s = string(v.major)
-    v.minor == 0 || (s *= ".$(v.minor)")
-    v.patch == 0 || (s *= ".$(v.patch)")
+    s = if v.patch != 0
+        string(v)
+    elseif v.minor != 0
+        "$(v.major).$(v.minor)"
+    else
+        string(v.major)
+    end
     return repr(s)
 end

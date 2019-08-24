@@ -1,39 +1,3 @@
-# Returns a path to a file that's not too verbose.
-function file_docstring(file::Union{AbstractString, Nothing})
-    return repr(file === nothing ? file : replace(file, DEFAULTS_DIR => "<defaults>"))
-end
-
-# Returns a templated docstring for the plugins below.
-function make_docstring(
-    T::AbstractString,
-    name::AbstractString,
-    file::Union{AbstractString, Nothing},
-    url::AbstractString,
-    extra::AbstractString="",
-)
-    doc = """
-            $T(file::Union{AbstractString, Nothing}=$(file_docstring(file))) -> $T
-
-        Add `$T` to a [`Template`](@ref)'s plugin list to integrate your project with [$name]($url).
-        """
-    isempty(extra) || (doc *= extra)
-    return doc
-end
-
-"""$(make_docstring("AppVeyor", "AppVeyor", default_file("appveyor.yml"), "https://appveyor.com"))"""
-@plugin AppVeyor default_file("appveyor.yml") => ".appveyor.yml" badges=Badge(
-    "Build Status",
-    "https://ci.appveyor.com/api/projects/status/github/{{USER}}/{{PKGNAME}}.jl?svg=true",
-    "https://ci.appveyor.com/project/{{USER}}/{{PKGNAME}}-jl",
-)
-
-"""$(make_docstring("CirrusCI", "CirrusCI", default_file("cirrus.yml"), "https://cirrus-ci.org", "The default configuration file supports only FreeBSD builds via [CirrusCI.jl](https://github.com/ararslan/CirrusCI.jl)"))"""
-@plugin CirrusCI default_file("cirrus.yml") => ".cirrus.yml" badges=Badge(
-    "Build Status",
-    "https://api.cirrus-ci.com/github/{{USER}}/{{PKGNAME}}.jl.svg",
-    "https://cirrus-ci.com/github/{{USER}}/{{PKGNAME}}.jl",
-)
-
 # Templating the file requires some changes to Mustache, I think.
 # """
 #     Citation(
@@ -45,27 +9,6 @@ end
 # If `readme_section` is set, then generated packages' README files will contain a section about citing.
 # """
 # @plugin Citation default_file("CITATION.bib") => "CITATION.bib" readme_section::Bool=false
-
-"""$(make_docstring("Codecov", "Codecov", nothing, "https://codecov.io"))"""
-@plugin Codecov nothing => ".codecov.yml" gitignore=["*.jl.cov", "*.jl.*.cov", "*.jl.mem"] badges=Badge(
-    "Coverage",
-    "https://codecov.io/gh/{{USER}}/{{PKGNAME}}.jl/branch/master/graph/badge.svg",
-    "https://codecov.io/gh/{{USER}}/{{PKGNAME}}.jl",
-)
-
-"""$(make_docstring("Coveralls", "Coveralls", nothing, "https://coveralls.io"))"""
-@plugin Coveralls nothing => ".coveralls.yml" gitignore=["*.jl.cov", "*.jl.*.cov", "*.jl.mem"] badges=Badge(
-    "Coverage",
-    "https://coveralls.io/repos/github/{{USER}}/{{PKGNAME}}.jl/badge.svg?branch=master",
-    "https://coveralls.io/github/{{USER}}/{{PKGNAME}}.jl?branch=master",
-)
-
-"""$(make_docstring("TravisCI", "Travis CI", default_file("travis.yml"), "https://travis-ci.com"))"""
-@plugin TravisCI default_file("travis.yml") => ".travis.yml" badges=Badge(
-    "Build Status",
-    "https://travis-ci.com/{{USER}}/{{PKGNAME}}.jl.svg?branch=master",
-    "https://travis-ci.com/{{USER}}/{{PKGNAME}}.jl",
-)
 
 """
     GitLabCI(

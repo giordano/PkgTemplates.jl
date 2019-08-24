@@ -1,5 +1,6 @@
 module PkgTemplates
 
+using Base: @kwdef
 using Base.Filesystem: contractuser
 using Dates
 using InteractiveUtils

@@ -88,6 +88,8 @@ function make_template(::Val{false}; kwargs...)
     )
 end
 
+hasplugin(t::Template, ::Type{T<:Plugin}) = any(U -> U <: T, keys(t.plugins))
+
 getkw(kwargs, k) = get(() -> defaultkw(k), kwargs, k)
 
 defaultkw(s::Symbol) = defaultkw(Val(s))

@@ -1,12 +1,23 @@
-Julia {{VERSION}}:
-  image: julia:{{VERSION}}
-  script: julia --project='@.' -e 'using Pkg; Pkg.build(); Pkg.test({{#GITLABCOVERAGE}}; coverage=true{{/GITLABCOVERAGE}})'
-{{#COVERAGE}}
+{{#VERSIONS}}
+Julia {{.}}:
+  image: julia:{{.}}
+  script: julia --project=@. -e '
+    using Pkg
+    Pkg.build()
+    Pkg.test({{#HAS_COVERAGE}}coverage=true{{/HAS_COVERAGE}})'
+{{/VERSIONS}}
+{{#HAS_COVERAGE}}
   coverage: /Test Coverage (\d+\.\d+%)/
   after_script:
-    - julia -e 'using Printf; using Pkg; Pkg.add("Coverage"); using Coverage; c, t = get_summary(process_folder()); @printf "Test Coverage %.2f%%\n" 100c/t'
-{{/COVERAGE}}
-{{#GL_PAGES}}
+    - julia -e '
+        using Pkg
+        Pkg.add("Coverage")
+        using Coverage
+        c, t = get_summary(process_folder())
+        using Printf
+        @printf "Test Coverage %.2f%%\n" 100c/t'
+{{/HAS_COVERAGE}}
+{{#HAS_DOCUMENTER}}
 pages:
   image: julia:{{VERSION}}
   stage: deploy
@@ -23,4 +34,4 @@ pages:
       - public
   only:
     - master
-{{/GL_PAGES}}
+{{/HAS_DOCUMENTER}}
