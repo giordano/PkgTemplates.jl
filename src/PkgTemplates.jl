@@ -1,14 +1,14 @@
 module PkgTemplates
 
-using Base: @kwdef
+using Base: @kwdef, current_project
 using Base.Filesystem: contractuser
-using Dates
-using InteractiveUtils
-using LibGit2
-using Mustache
-using Pkg
-using REPL.TerminalMenus
-using URIParser
+using Dates: month, today, year
+using InteractiveUtils: subtypes
+using LibGit2: LibGit2
+using Mustache: render
+using Pkg: PackageSpec, Pkg
+using REPL.TerminalMenus: MultiSelectMenu, RadioMenu, request
+using URIParser: URI
 
 export
     # Template/package generation.
@@ -18,14 +18,14 @@ export
     show_license,
     available_licenses,
     # Plugins.
-    Documenter,
     AppVeyor,
-    TravisCI,
-    GitLabCI,
     CirrusCI,
+    Citation,
     Codecov,
     Coveralls,
-    Citation
+    Documenter,
+    GitLabCI,
+    TravisCI
 
 const default_version = VersionNumber(VERSION.major)
 

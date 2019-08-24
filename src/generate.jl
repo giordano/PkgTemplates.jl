@@ -16,9 +16,9 @@ function generate(pkg::AbstractString, t::Template)
         # Create the directory with some boilerplate inside.
         Pkg.generate(pkg_dir)
 
-        # Add a [compat] section for Julia.
+        # Add a [compat] section for Julia. By default, Julia 1.x is supported.
         open(joinpath(pkg_dir, "Project.toml"), "a") do io
-            println(io, "\n[compat]\njulia = $(repr_version(t.julia_version))")
+            println(io, "\n[compat]\njulia = \"1\"")
         end
 
         # Replace the authors field with the template's authors.
@@ -41,17 +41,16 @@ function generate(pkg::AbstractString, t::Template)
             else
                 "https://$(t.host)/$(t.user)/$pkg.jl"
             end
-            # We need to set the remote in a strange way, see #8.
+
+            # Set the remote (in a weird way, see #8).
             close(LibGit2.GitRemote(repo, "origin", rmt))
             @info "Set remote origin to $rmt"
         end
 
         # Generate the files.
-        gen_tests(t, pkg_dir)
-        gen_readme(t, pkg_dir)
-        gen_license(t, pkg_dir)
-        gen_gitignore(t, pkg_dir)
-        gen_license(t, pkg_dir)
+        foreach((gen_tests, gen_readme, gen_license, gen_gitignore, gen_license)) do f
+            f(t, pkg_dir)
+        end
         foreach(p -> gen_plugin(p, t, pkg_dir), values(t.plugins))
 
         if t.git
@@ -67,9 +66,9 @@ function generate(pkg::AbstractString, t::Template)
         end
 
         @info "New package is at $pkg_dir"
-    catch e
+    catch
         rm(pkg_dir; recursive=true, force=true)
-        rethrow(e)
+        rethrow()
     end
 end
 
@@ -89,57 +88,62 @@ function make_tests(t::Template, pkg_dir::AbstractString)
     return [(joinpath(pkg_dir, "test", "runtests.jl"), text)]
 end
 
-function make_readme(t::Template, pkg_dir::AbstractString)
+function gen_readme(t::Template, pkg_dir::AbstractString)
+    open(io -> gen_readme(io, t, pkg_dir), joinpath(pkg_dir, "README.md"), "w")
+end
+function gen_readme(io::IO, t::Template, pkg_dir::AbstractString)
     pkg = basename(pkg_dir)
     text = "# $pkg\n"
 
     # Generate the ordered badges first, then add any remaining ones to the right.
     done = DataType[]
     foreach(BADGE_ORDER) do T
-        if haskey(t.plugins, T)
+        if hasplugin(t, T)
             text *= "\n" * join(badges(t.plugins[T], t.user, pkg), "\n")
             push!(done, T)
         end
     end
     foreach(setdiff(keys(t.plugins), done)) do T
+        bs = badges(t.plugins[T], t, pkg)
         text *= "\n" * join(badges(t.plugins[T], t.user, pkg), "\n")
     end
-    if haskey(t.plugins, Citation) && t.plugins[Citation].readme_section
-        text *= "\n## Citing\n\nSee `CITATION.bib` for the relevant reference(s).\n"
+    if hasplugin(t, Citation) && t.plugins[Citation].readme_section
+        text *= "\n## Citing\n\nSee [`CITATION.bib`](CITATION.bib) for the relevant reference(s)."
     end
 
-
-    return [(joinpath(pkg_dir, "README.md"), text)]
+    println(io, text)
 end
 
-function make_gitignore(t::Template, pkg_dir::AbstractString)
-    t.git || return ()
+function gen_gitignore(t::Template, pkg_dir::AbstractString)
+    open(io -> gen_gitignore(io, t, pkg_dir), joinpath(pkg_dir, ".gitignore"), "w")
+end
+function gen_gitignore(io::IO, t::Template)
+    t.git || return
 
     entries = mapreduce(gitignore, append!, values(t.plugins); init=[".DS_Store", "/dev/"])
     # Only ignore manifests at the repo root.
     t.manifest || "Manifest.toml" in entries || push!(entries, "/Manifest.toml")
 
     unique!(sort!(entries))
-    text = join(entries, "\n")
-
-    return [(joinpath(pkg_dir, ".gitignore"), text)]
+    println(io, join(entries, "\n"))
 end
 
-function make_license(t::Template, pkg_dir::AbstractString)
-    isempty(t.license) && return ()
+function gen_license(t::Template, pkg_dir::AbstractString)
+    open(io -> gen_license(io, t), joinpath(pkg_dir, "LICENSE"), "w")
+end
+function gen_license(io::IO, t::Template)
+    isempty(t.license) && return
     text = "Copyright (c) $(year(today())) $(t.authors)\n"
     text *= read_license(t.license)
-    return [(joinpath(pkg_dir, "LICENSE"), text)]
+    println(io, text)
 end
 
-for f in (:require, :readme, :gitignore, :license)
-    gen = Symbol(:gen_, f)
-    make = Symbol(:make_, f)
-    @eval $gen(t::Template, pkg_dir::AbstractString) = foreach(gen_file, $make(t, pkg_dir))
+function gen_tests(t::Template, pkg_dir::AbstractString)
+    test = mkpath(joinpath(pkg_dir, "test"))
+    open(io -> gen_tests(io, t, pkg_dir), joinpath(test, "runtests.jl"), "w")
 end
-
-function gen_tests(t::Template, pkg_dir::AbstractString,)
-    proj = Base.current_project()
+function gen_tests(io::IO, t::Template, pkg_dir::AbstractString)
+    proj = current_project()
     try
         # Add the Test dependency as a test-only dependency.
         # To avoid visual noise from adding/removing the dependency, insert it manually.

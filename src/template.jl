@@ -111,32 +111,3 @@ function defaultkw(::Val{:authors})
     isempty(email) || (author *= "<$email>")
     return strip(author)
 end
-
-function Base.show(io::IO, t::Template)
-    println(io, "Template:")
-    println(io, HALFTAB, ARROW, "User: ", maybe_string(t.user))
-    println(io, HALFTAB, ARROW, "Host: ", maybe_string(t.host))
-
-    print(io, HALFTAB, ARROW, "License: ")
-    if isempty(t.license)
-        println(io, "None")
-    else
-        println(io, t.license, " ($(t.authors) ", year(today()), ")")
-    end
-
-    println(io, HALFTAB, ARROW, "Package directory: ", contractuser(maybe_string(t.dir)))
-    println(io, HALFTAB, ARROW, "Minimum Julia version: v", version_floor(t.julia_version))
-    println(io, HALFTAB, ARROW, "SSH remote: ", yesno(t.ssh))
-    println(io, HALFTAB, ARROW, "Commit Manifest.toml: ", yesno(t.manifest))
-    println(io, HALFTAB, ARROW, "Create Git repository: ", yesno(t.git))
-    println(io, HALFTAB, ARROW, "Develop packages: ", yesno(t.develop))
-
-    print(io, HALFTAB, ARROW, "Plugins:")
-    if isempty(t.plugins)
-        print(io, " None")
-    else
-        foreach(sort(collect(values(t.plugins)); by=string)) do p
-            print(io, "\n", TAB, DOT, padtail(sprint(show, p), TAB * HALFTAB))
-        end
-    end
-end

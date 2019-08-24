@@ -13,9 +13,8 @@ via `T`, where `T` is some supported CI plugin, or `Nothing` to only support loc
 documentation builds.
 
 !!! note
-    If deploying documentation with Travis CI, don't forget to complete the required
-    configuration (see
-    [here](https://juliadocs.github.io/Documenter.jl/stable/man/hosting/#SSH-Deploy-Keys-1)).
+    If deploying documentation with Travis CI, don't forget to complete the required configuration.
+    See [here](https://juliadocs.github.io/Documenter.jl/stable/man/hosting/#SSH-Deploy-Keys-1).
 """
 struct Documenter{T<:Union{GitLabCI, TravisCI, Nothing}} <: Plugin
     assets::Vector{String}
@@ -41,34 +40,26 @@ end
 
 Documenter(; kwargs...) = Documenter{Nothing}(; kwargs...)
 
-# Windows Git also recognizes these paths.
 gitignore(::Documenter) = ["/docs/build/", "/docs/site/"]
 
-badges(::Documenter{Nothing}) = Badge[]
-
-function badges(::Documenter)
-    return [
-        Badge(
-            "Stable",
-            "https://img.shields.io/badge/docs-stable-blue.svg",
-            "https://{{USER}}.github.io/{{PKGNAME}}.jl/stable",
-        ),
-        Badge(
-            "Dev",
-            "https://img.shields.io/badge/docs-dev-blue.svg",
-            "https://{{USER}}.github.io/{{PKGNAME}}.jl/dev",
-        ),
-    ]
-end
-
-function badges(::Documenter{GitLabCI})
-    b = Badge(
+badges(::Documenter) = Badge[]
+badges(::Documenter{TravisCI}) = [
+    Badge(
+        "Stable",
+        "https://img.shields.io/badge/docs-stable-blue.svg",
+        "https://{{USER}}.github.io/{{PKGNAME}}.jl/stable",
+    ),
+    Badge(
         "Dev",
         "https://img.shields.io/badge/docs-dev-blue.svg",
-        "https://{{USER}}.gitlab.io/{{PKGNAME}}.jl/dev"
-    )
-    return [b]
-end
+        "https://{{USER}}.github.io/{{PKGNAME}}.jl/dev",
+    ),
+]
+badges(::Documenter{GitLabCI}) = Badge(
+    "Dev",
+    "https://img.shields.io/badge/docs-dev-blue.svg",
+    "https://{{USER}}.gitlab.io/{{PKGNAME}}.jl/dev",
+)
 
 # Do integration setup for specific Documenter types.
 gen_integrations(::Documenter, ::Template, ::AbstractString) = nothing
@@ -89,7 +80,7 @@ function gen_plugin(p::Documenter, t::Template, pkg_name::AbstractString)
     mkpath(docs_dir)
 
     # Create the documentation project.
-    proj = Base.current_project()
+    proj = current_project()
     try
         Pkg.activate(docs_dir)
         Pkg.add(PackageSpec(; name="Documenter", uuid=DOCUMENTER_UUID))

@@ -18,23 +18,21 @@ const LICENSES = Dict(
 
 Print the names of all available licenses.
 """
-available_licenses(io::IO) = print(io, join(("$k: $v" for (k, v) in LICENSES), "\n"))
-available_licenses() = available_licenses(stdout)
+available_licenses(io::IO=stdout) = print(io, join(("$k: $v" for (k, v) in LICENSES), "\n"))
 
 """
     show_license([io::IO], license::AbstractString) -> Nothing
 
 Print the text of `license`. Errors if the license is not found.
 """
-show_license(io::IO, license::AbstractString) = print(io, read_license(license))
+show_license(io::IO, license::AbstractString) = println(io, read_license(license))
 show_license(license::AbstractString) = show_license(stdout, license)
 
-# Read the contents of a license.
-function read_license(license::AbstractString)
+function license_path(license::AbstractString)
     path = joinpath(LICENSE_DIR, license)
-    if isfile(path)
-        return string(readchomp(path))
-    else
-        throw(ArgumentError("License '$license' is not available"))
-    end
+    isfile(path) || throw(ArgumentError("License '$license' is not available"))
+    return path
 end
+
+# Read the contents of a license.
+read_license(license::AbstractString) = string(readchomp(license_path(license)))

@@ -1,8 +1,13 @@
-const DEFAULT_CI_VERSIONS = [v"1.0", "nightly"]
+# TODO deal with formatting the current version properly
+
+
+const DEFAULT_CI_VERSIONS = ["1.0", "nightly"]
 const VersionsOrStrings = Vector{Union{VersionNumber, String}}
 
+format_version(v::VersionNumber) = "$(v.major).$(v.minor)"
+
 function collect_versions(versions::Vector, t::Template)
-    return unique(sort([versions; t.julia_version]; by=string))
+    return unique(sort([versions; format_version(t.julia_version)]; by=string))
 end
 
 abstract type CI <: Plugin end
@@ -17,18 +22,16 @@ abstract type CI <: Plugin end
     extra_versions::VersionsOrStrings = DEFAULT_CI_VERSIONS
 end
 
-TravisCI(file::AbstractString; kwargs...) = TravisCI(source=file; kwargs...)
+source(p::TravisCI) = p.file
+destination(::TravisCI) = ".travis.yml"
 
-source(p::TravisCI, ::Template) = p.file
-destination(::TravisCI, ::Template) = ".travis.yml"
-
-badges(::TravisCI, ::Template) = Badge(
+badges(::TravisCI) = Badge(
     "Build Status",
     "https://travis-ci.com/{{USER}}/{{PKGNAME}}.jl.svg?branch=master",
     "https://travis-ci.com/{{USER}}/{{PKGNAME}}.jl",
 )
 
-function view(p::TravisCI, t::Template)
+function view(p::TravisCI, t::Template, ::AbstractString)
     os = String[]
     p.linux && push!(os, "linux")
     p.osx && push!(os, "osx")
@@ -52,16 +55,16 @@ end
     extra_versions::VersionsOrStrings = DEFAULT_CI_VERSIONS
 end
 
-source(p::AppVeyor, ::Template) = p.file
-destination(::AppVeyor, ::Template) = ".appveyor.yml"
+source(p::AppVeyor) = p.file
+destination(::AppVeyor) = ".appveyor.yml"
 
-badges(::AppVeyor, ::Template) = Badge(
+badges(::AppVeyor) = Badge(
     "Build Status",
     "https://ci.appveyor.com/api/projects/status/github/{{USER}}/{{PKGNAME}}.jl?svg=true",
     "https://ci.appveyor.com/project/{{USER}}/{{PKGNAME}}-jl",
 )
 
-function view(p::AppVeyor, t::Template)
+function view(p::AppVeyor, t::Template, ::AbstractString)
     platforms = ["x64"]
     t.x86 && push!(platforms, "x86")
     return Dict(
@@ -79,16 +82,16 @@ end
     extra_versions::VersionsOrStrings = DEFAULT_CI_VERSIONS
 end
 
-source(p::CirrusCI, ::Template) = p.file
-destination(::CirrusCI, ::Template) = ".cirrus.yml"
+source(p::CirrusCI) = p.file
+destination(::CirrusCI) = ".cirrus.yml"
 
-badges(::CirrusCI, ::Template) = Badge(
+badges(::CirrusCI) = Badge(
     "Build Status",
     "https://api.cirrus-ci.com/github/{{USER}}/{{PACKAGE}}.jl.svg",
     "https://cirrus-ci.com/github/{{USER}}/{{PKGNAME}}.jl",
 )
 
-function view(p::CirrusCI, t::Template)
+function view(p::CirrusCI, t::Template, ::AbstractString)
     return Dict(
         "HAS_CODECOV" => hasplugin(t, Codecov),
         "HAS_COVERALLS" => hasplugin(t, Coveralls),
@@ -105,12 +108,12 @@ end
     extra_versions::Vector{VersionNumber} = [v"1.0"]
 end
 
-gitignore(p::GitLabCI, ::Template) = p.coverage ? COVERAGE_GITIGNORE : String[]
+gitignore(p::GitLabCI) = p.coverage ? COVERAGE_GITIGNORE : String[]
 
-source(p::GitLabCI, ::Template) = p.source
-destination(::GitLabCI, ::Template) = ".gitlab-ci.yml"
+source(p::GitLabCI) = p.source
+destination(::GitLabCI) = ".gitlab-ci.yml"
 
-function badges(p::GitLabCI, ::Template)
+function badges(p::GitLabCI)
     ci = Badge(
         "Build Status",
         "https://gitlab.com/{{USER}}/{{PKGNAME}}.jl/badges/master/build.svg",
@@ -124,7 +127,7 @@ function badges(p::GitLabCI, ::Template)
     return p.coverage ? [ci, cov] : [ci]
 end
 
-function view(p::GitLabCI, t::Template)
+function view(p::GitLabCI, t::Template, ::AbstractString)
     return Dict(
         "HAS_COVERAGE" => p.coverage,
         "HAS_DOCUMENTER" => hasplugin(t, Documenter{GitLabCI}),

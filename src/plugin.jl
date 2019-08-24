@@ -1,41 +1,37 @@
 """
-    view(::BasicPlugin, ::Template) -> Dict{String, Any}
+    view(::Plugin, ::Template, pkg::AbstractString) -> Dict{String}
 
-Return extra substitutions to be made for this plugin.
+Return extra string substitutions to be made for this plugin.
 """
-view(::BasicPlugin, ::Template) = Dict{String, Any}()
+view(::Plugin, ::Template, ::AbstractString) = Dict{String, Any}()
 
 """
-    gitignore(::Plugin, ::Template) -> Vector{String}
+    gitignore(::Plugin) -> Vector{String}
 
 Return patterns that should be added to `.gitignore`.
 """
-gitignore(::BasicPlugin, ::Template) = String[]
+gitignore(::Plugin) = String[]
 
 """
-    badges(::BasicPlugin, ::Template) -> Union{Badge, Vector{Badge}}
+    badges(::Plugin) -> Union{Badge, Vector{Badge}}
 
 Return a list of [`Badge`](@ref)s, or just one, to be added to `README.md`.
 """
 badges(::Plugin) = Badge[]
 
 """
-    source(::BasicPlugin, ::Template) -> Union{String, Nothing}
+    source(::BasicPlugin) -> Union{String, Nothing}
 
-Return the path to a plugin's configuration file, or `nothing` to indicate no file.
+Return the path to a plugin's configuration file template, or `nothing` to indicate no file.
 """
 source(::BasicPlugin) = nothing
 
 """
-    destination(::BasicPlugin, ::Template) -> Union{String, Nothing}
+    destination(::BasicPlugin) -> String
 
 Return the destination, relative to the package root, of a plugin's configuration file.
 """
-destination(p::GeneratedPlugin) = p.dest
-
-gitignore(p::GeneratedPlugin) = p.gitignore
-badges(p::GeneratedPlugin) = p.badges
-view(p::GeneratedPlugin) = p.view
+function destination end
 
 """
     Badge(hover::AbstractString, image::AbstractString, link::AbstractString) -> Badge
@@ -54,33 +50,32 @@ struct Badge
     link::String
 end
 
+Base.string(b::Badge) = "[![$(b.hover)]($(b.image))]($(b.link))"
+
 # Format a plugin's badges as a list of strings, with all substitutions applied.
-badges(p::Plugin, t::Template, pkg_name::AbstractString) = map(b -> render_template(string(b))
-    return map(b -> substitute(string(b), subs), badges(p))
+function badges(p::Plugin, t::Template, pkg_name::AbstractString)
+    bs = badges(p)
+    bs isa Vector || (bs = [bs])
+    bs = map(string, bs)
+    # TODO render
 end
 
 """
-    gen_plugin(p::Plugin, t::Template, pkg_name::AbstractString) -> Nothing
+    gen_plugin(p::Plugin, t::Template, pkg::AbstractString) -> Nothing
 
 Generate any files associated with a plugin.
 
-# Arguments
+## Arguments
 * `p::Plugin`: Plugin whose files are being generated.
 * `t::Template`: Template configuration.
-* `pkg_name::AbstractString`: Name of the package.
+* `pkg::AbstractString`: Name of the package.
 """
 gen_plugin(::Plugin, ::Template, ::AbstractString) = nothing
 
 function gen_plugin(p::BasicPlugin, t::Template, pkg::AbstractString)
     source(p) === nothing && return
     text = render_template(t, source(p), view(p))
-    text = substitute(
-        read(source(p), String),
-        t,
-        merge(Dict("PKGNAME" => pkg_name), p.view),
-    )
     gen_file(joinpath(t.dir, pkg_name, destination(p)), text)
-    return [destination(p)]
 end
 
 interactive(T::Type{<:GeneratedPlugin}) = T(prompt_config(T))

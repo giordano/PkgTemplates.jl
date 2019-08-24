@@ -1,17 +1,18 @@
+const PLUGIN_TYPES = let
+    leaves(T::Type) = isabstracttype(T) ? vcat(map(leaves, subtypes(T))...) : [T]
+    leaves(Plugin)
+end
+
 """
     interactive(T::Type{<:Plugin}) -> T
 
-Interactively create a plugin of type `T`. When this method is implemented for a type, it
-becomes available to [`Template`](@ref)s created with [`interactive_template`](@ref)
-(it is not implemented by default).
+Interactively create a plugin of type `T`.
+When this method is implemented for a type, it becomes available to [`Template`](@ref)s created with `interactive=true`.
 """
 function interactive end
 
 function make_template(::Val{true}; kwargs...)
     @info "Default values are shown in [brackets]"
-
-    # Getting the leaf types in a separate thread eliminates an awkward wait.
-    plugin_types = @async leaves(Plugin)
 
     opts = Dict{Symbol, Any}()
     fast = get(kwargs, :fast, false)
@@ -89,7 +90,7 @@ function make_template(::Val{true}; kwargs...)
 
     opts[:plugins] = get(kwargs, :plugins) do
         # TODO: Break this out into something reusable?
-        types = filter(T -> hasmethod(interactive, (Type{T},)), fetch(plugin_types))
+        types = filter(T -> applicable(interactive, T), PLUGIN_TYPES)
         menu = MultiSelectMenu(map(string ∘ nameof, types))
         selected = types[collect(request("Plugins:", menu))]
         map(interactive, selected)
