@@ -1,6 +1,6 @@
-using {{PKGNAME}}
+using {{PKG}}
 using Test
 
-@testset "{{PKGNAME}}.jl" begin
+@testset "{{PKG}}.jl" begin
     # Write your tests here.
 end

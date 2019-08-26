@@ -1,3 +1,9 @@
+const DEFAULTS_DIR = normpath(joinpath(@__DIR__, "..", "defaults"))
+
+abstract type BasicPlugin <: Plugin end
+
+default_file(paths::AbstractString...) = joinpath(DEFAULTS_DIR, paths...)
+
 """
     view(::Plugin, ::Template, pkg::AbstractString) -> Dict{String}
 
@@ -74,8 +80,46 @@ gen_plugin(::Plugin, ::Template, ::AbstractString) = nothing
 
 function gen_plugin(p::BasicPlugin, t::Template, pkg::AbstractString)
     source(p) === nothing && return
-    text = render_template(t, source(p), view(p))
+    text = render(source(p), view(p, t, pkg); tags=tags(p))
     gen_file(joinpath(t.dir, pkg_name, destination(p)), text)
 end
 
-interactive(T::Type{<:GeneratedPlugin}) = T(prompt_config(T))
+"""
+    gen_file(file::AbstractString, text::AbstractString) -> Int
+
+Create a new file containing some given text.
+Trailing whitespace is removed, and the file will end with a newline.
+"""
+function gen_file(file::AbstractString, text::AbstractString)
+    mkpath(dirname(file))
+    text = join(map(rstrip, split(text, "\n")), "\n")
+    endswith(text , "\n") || (text *= "\n")
+    write(file, text)
+end
+
+render_file(file::AbstractString, view, tags) = render_text(read(file, String), view, tags)
+
+render_text(text::AbstractString, view, tags) = render(text, view; tags=tags)
+
+function render_badges(p::BasicPlugin, t::Template, pkg::AbstractString)
+end
+
+function render_plugin(p::BasicPlugin, t::Template, pkg::AbstractString)
+    render_file(source(p), view(p, t, pkg), tags(p))
+end
+
+include(joinpath("plugins", "essentials.jl"))
+include(joinpath("plugins", "coverage.jl"))
+include(joinpath("plugins", "ci.jl"))
+include(joinpath("plugins", "citation.jl"))
+include(joinpath("plugins", "documenter.jl"))
+
+const BADGE_ORDER = [
+    Documenter{GitLabCI},
+    Documenter{TravisCI},
+    TravisCI,
+    AppVeyor,
+    GitLabCI,
+    Codecov,
+    Coveralls,
+]

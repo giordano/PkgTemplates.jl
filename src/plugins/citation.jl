@@ -9,12 +9,15 @@ If `readme` is set, then `README.md` will contain a section about citing.
     readme::Bool = false
 end
 
+tags(::Citation) = "<<", ">>"
+
 source(p::Citation) = p.file
 destination(::Citation) = "CITATION.bib"
 
 view(::Citation, t::Template, pkg::AbstractString) = Dict(
     "AUTHORS" => t.authors,
     "MONTH" => month(today()),
+    "PKG" => pkg,
     "URL" => "https://$(t.host)/$(t.user)/$pkg.jl",
     "YEAR" => year(today()),
 )

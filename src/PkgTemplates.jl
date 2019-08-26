@@ -11,23 +11,21 @@ using REPL.TerminalMenus: MultiSelectMenu, RadioMenu, request
 using URIParser: URI
 
 export
-    # Template/package generation.
     Template,
-    generate,
-    # Licenses.
-    show_license,
-    available_licenses,
-    # Plugins.
     AppVeyor,
     CirrusCI,
     Citation,
     Codecov,
     Coveralls,
     Documenter,
+    Gitignore,
     GitLabCI,
+    License,
+    Readme,
+    Tests,
     TravisCI
 
-const default_version = VersionNumber(VERSION.major)
+const DEFAULT_VERSION = VersionNumber(VERSION.major)
 
 """
 A plugin to be added to a [`Template`](@ref), which adds some functionality or integration.
@@ -38,20 +36,6 @@ include("licenses.jl")
 include("template.jl")
 include("generate.jl")
 include("plugin.jl")
-include("utils.jl")
 include("interactive.jl")
-include(joinpath("plugins", "generated.jl"))
-include(joinpath("plugins", "citation.jl"))
-include(joinpath("plugins", "documenter.jl"))
-
-const BADGE_ORDER = [
-    Documenter{GitLabCI},
-    Documenter{TravisCI},
-    TravisCI,
-    AppVeyor,
-    GitLabCI,
-    Codecov,
-    Coveralls,
-]
 
 end

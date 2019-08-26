@@ -1,10 +1,10 @@
-# {{PKGNAME}}
-{{#BADGES}}
+# {{PKG}}{{#HAS_INLINE_BADGES}} {{#BADGES}}{{.}} {{/BADGES}}{{/HAS_INLINE_BADGES}}
+{{^HAS_INLINE_BADGES}}
 
-{{/BADGES}}
 {{#BADGES}}
 {{.}}
 {{/BADGES}}
+{{/HAS_INLINE_BADGES}}
 {{#HAS_CITATION}}
 
 ## Citing

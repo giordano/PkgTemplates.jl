@@ -1,7 +1,16 @@
+# Printing utils.
+const TAB = repeat(' ', 4)
+const HALFTAB = repeat(' ', 2)
+const DOT = "• "
+const ARROW = "→ "
 const PLUGIN_TYPES = let
     leaves(T::Type) = isabstracttype(T) ? vcat(map(leaves, subtypes(T))...) : [T]
     leaves(Plugin)
 end
+
+yesno(x::Bool) = x ? "Yes" : "No"
+
+maybe_string(s::AbstractString) = isempty(s) ? "None" : string(s)
 
 """
     interactive(T::Type{<:Plugin}) -> T
@@ -127,8 +136,8 @@ function prompt(f::Function, s::AbstractString, default)
     end
 end
 
-function prompt_config(T::Type{<:GeneratedPlugin})
-    s = "$(nameof(T)): Config template filename"
+function prompt_config(T::Type{<:BasicPlugin})
+    s = "$(nameof(T)): Source file template path"
     default = source(T)
     default === nothing && (s *= " (\"None\" for no file)")
     answer = prompt_string(s, default === nothing ? "None" : contractuser(default))

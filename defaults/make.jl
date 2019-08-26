@@ -1,14 +1,31 @@
-using {{PKGNAME}}
+using {{PKG}}
 using Documenter
 
 makedocs(
-    modules=[{{PKGNAME}}],
-    format=HTML({{ASSETS}}),
+    modules=[{{PKG}}],
+    authors="{{AUTHORS}}",
+    repo="{{REPO}}",
+    sitename="{{PKG}}.jl",
+    format=Documenter.HTML(;
+        canonical="{{CANONICAL}}",
+        assets={{^HAS_ASSETS}}String{{/HAS_ASSETS}}[{{^HAS_ASSETS}}],{{/HAS_ASSETS}}
+            {{#ASSETS}}
+            "{{.}}",
+            {{/ASSETS}}
+{{#HAS_ASSETS}}
+        ],
+{{/HAS_ASSETS}}
+    ),
     pages=[
-        "HOME" => "index.md",
+        "Home" => "index.md",
     ],
-    sitename="{{PKGNAME}}.jl"
-    authors="{{AUTHORS}}"
-    assets="{{ASSETS}}",
-
+    {{#MAKEDOCS_KWARGS}}
+    {{first}}={{second}},
+    {{/MAKEDOCS_KWARGS}}
 )
+{{#HAS_DEPLOY}}
+
+deploydocs(;
+    repo="{{REPO}}",
+)
+{{/HAS_DEPLOY}}

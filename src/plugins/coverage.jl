@@ -13,11 +13,11 @@ destination(::Codecov) = ".codecov.yml"
 
 badges(::Codecov) = Badge(
     "Coverage",
-    "https://codecov.io/gh/{{USER}}/{{PKGNAME}}.jl/branch/master/graph/badge.svg",
-    "https://codecov.io/gh/{{USER}}/{{PKGNAME}}.jl",
+    "https://codecov.io/gh/{{USER}}/{{PKG}}.jl/branch/master/graph/badge.svg",
+    "https://codecov.io/gh/{{USER}}/{{PKG}}.jl",
 )
 
-struct Coveralls <: Coverage
+@kwdef struct Coveralls <: Coverage
     file::Union{String, Nothing} = nothing
 end
 
@@ -26,6 +26,6 @@ destination(::Coveralls) = ".coveralls.yml"
 
 badges(::Coveralls) = Badge(
     "Coverage",
-    "https://coveralls.io/repos/github/{{USER}}/{{PKGNAME}}.jl/badge.svg?branch=master",
-    "https://coveralls.io/github/{{USER}}/{{PKGNAME}}.jl?branch=master",
+    "https://coveralls.io/repos/github/{{USER}}/{{PKG}}.jl/badge.svg?branch=master",
+    "https://coveralls.io/github/{{USER}}/{{PKG}}.jl?branch=master",
 )

@@ -1,40 +1,37 @@
 const DOCUMENTER_UUID = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-const RESERVED_KWS = [:modules, :format, :pages, :repo, :sitename, :authors, :assets]
 
 """
-    Documenter{T<:Union{GitLabCI, TravisCI, Nothing}}(;
+    Documenter{T<:Union{TravisCI, GitLabCI, Nothing}}(;
         assets::Vector{<:AbstractString}=String[],
-        kwargs::Union{Dict, NamedTuple}=Dict(),
+        makedocs_kwargs::Dict{Symbol}=Dict(),
+        canonical_url::Union{Function, Nothing}=nothing,
     ) -> Documenter{T}
 
-Add `Documenter{T}` to a template's plugins to add support for documentation
-generation via [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl), and deployment
-via `T`, where `T` is some supported CI plugin, or `Nothing` to only support local
-documentation builds.
+The `Documenter` plugin adds support for documentation generation via [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl).
+Documentation deployment depends on `T`, where `T` is some supported CI plugin, or `Nothing` to only support local documentation builds.
+
+## Keyword Arguments
+todo
+- `assets::Vector{<:AbstractString}=String[]`:
+- `makedocs_kwargs::Dict{Symbol}=Dict{Symbol, Any}()`:
+- `canonical_url::Union{Function, Nothing}=nothing`:`
 
 !!! note
     If deploying documentation with Travis CI, don't forget to complete the required configuration.
     See [here](https://juliadocs.github.io/Documenter.jl/stable/man/hosting/#SSH-Deploy-Keys-1).
 """
-struct Documenter{T<:Union{GitLabCI, TravisCI, Nothing}} <: Plugin
+struct Documenter{T<:Union{TravisCI, GitLabCI, Nothing}} <: Plugin
     assets::Vector{String}
-    kwargs::Dict{Symbol, Any}
+    makedocs_kwargs::Dict{Symbol}
+    canonical_url::Union{Function, Nothing}
 
-    function Documenter{T}(;
+    # Can't use @kwdef due to some weird precompilation issues.
+    function Documenter{T}(
         assets::Vector{<:AbstractString}=String[],
-        kwargs=Dict(),
-    ) where T <: Union{GitLabCI, TravisCI, Nothing}
-        map!(abspath, assets, assets)
-        foreach(assets) do file
-            isfile(file) || throw(ArgumentError("Asset file $file not exist"))
-        end
-
-        kwargs = Dict{Symbol, Any}(pairs(kwargs))
-        foreach(kwargs) do (k, v)
-            k in RESERVED_KWS && throw(ArgumentError("makedocs keyword $k is reserved"))
-        end
-
-        return new(assets, kwargs)
+        makedocs_kwargs::Dict{Symbol}=Dict{Symbol, Any}(),
+        canonical_url::Union{Function, Nothing}=T === TravisCI ? github_pages_url : nothing,
+    ) where T <: Union{TravisCI, GitLabCI, Nothing}
+        return new(assets, makedocs_kwargs, canonical_url)
     end
 end
 
@@ -47,39 +44,41 @@ badges(::Documenter{TravisCI}) = [
     Badge(
         "Stable",
         "https://img.shields.io/badge/docs-stable-blue.svg",
-        "https://{{USER}}.github.io/{{PKGNAME}}.jl/stable",
+        "https://{{USER}}.github.io/{{PKG}}.jl/stable",
     ),
     Badge(
         "Dev",
         "https://img.shields.io/badge/docs-dev-blue.svg",
-        "https://{{USER}}.github.io/{{PKGNAME}}.jl/dev",
+        "https://{{USER}}.github.io/{{PKG}}.jl/dev",
     ),
 ]
 badges(::Documenter{GitLabCI}) = Badge(
     "Dev",
     "https://img.shields.io/badge/docs-dev-blue.svg",
-    "https://{{USER}}.gitlab.io/{{PKGNAME}}.jl/dev",
+    "https://{{USER}}.gitlab.io/{{PKG}}.jl/dev",
 )
 
-# Do integration setup for specific Documenter types.
-gen_integrations(::Documenter, ::Template, ::AbstractString) = nothing
-function gen_integrations(::Documenter{TravisCI}, t::Template, pkg_name::AbstractString)
-    make = joinpath(t.dir, pkg_name, "docs", "make.jl")
-    s = """
+view(p::Documenter, t::Template, pkg::AbstractString) = Dict(
+    "ASSETS" => p.assets,
+    "AUTHORS" => t.authors,
+    "CANONICAL" => p.canonical_url === nothing ? nothing : p.canonical_url(t, pkg),
+    "HAS_ASSETS" => !isempty(p.assets),
+    "MAKEDOCS_KWARGS" => map((k, v) -> k => repr(v), collect(p.makedocs_kwargs)),
+    "PKG" => pkg,
+    "REPO" => "https://$(t.host)/$(t.user)/$pkg.jl",
+)
 
-        deploydocs(;
-            repo="$(t.host)/$(t.user)/$pkg_name.jl",
-        )
-        """
-    open(io -> print(io, s), make, "a")
+function view(p::Documenter{TravisCI}, t::Template, pkg::AbstractString)
+    base = invoke(view, Tuple{Documenter, Template, AbstractString}, p, t, pkg)
+    return merge(base, Dict("HAS_DEPLOY" => true))
 end
 
-function gen_plugin(p::Documenter, t::Template, pkg_name::AbstractString)
-    path = joinpath(t.dir, pkg_name)
-    docs_dir = joinpath(path, "docs")
-    mkpath(docs_dir)
+function gen_plugin(p::Documenter, t::Template, pkg_dir::AbstractString)
+    # TODO: gen make.jl
+    # TODO: gen index.md
 
     # Create the documentation project.
+    docs_dir = joinpath(pkg_dir, "docs")
     proj = current_project()
     try
         Pkg.activate(docs_dir)
@@ -88,66 +87,10 @@ function gen_plugin(p::Documenter, t::Template, pkg_name::AbstractString)
         proj === nothing ? Pkg.activate() : Pkg.activate(proj)
     end
 
-    assets_string = if isempty(p.assets)
-        "String[]"
-    else
-        # Copy the files and create the list.
-        # We want something that looks like the following:
-        # [
-        #         assets/file1,
-        #         assets/file2,
-        #     ]
-
-        mkpath(joinpath(docs_dir, "src", "assets"))
-        s = "String[\n"
-        foreach(p.assets) do asset
-            cp(asset, joinpath(docs_dir, "src", "assets", basename(asset)))
-            s *= """$(repeat(TAB, 2))"assets/$(basename(asset))",\n"""
-        end
-
-        s * TAB * "]"
-    end
-
-    kwargs_string = if isempty(p.kwargs)
-        ""
-    else
-        # We want something that looks like the following:
-        #     key1="val1",
-        #     key2="val2",
-        #
-        join(string(TAB, k, "=", repr(v) for (k, v) in p.kwargs), ",\n")
-    end
-
-    make = """
-        using Documenter
-        using $pkg_name
-
-        makedocs(;
-            modules=[$pkg_name],
-            format=Documenter.HTML(),
-            pages=[
-                "Home" => "index.md",
-            ],
-            repo="https://$(t.host)/$(t.user)/$pkg_name.jl/blob/{commit}{path}#L{line}",
-            sitename="$pkg_name.jl",
-            authors="$(t.authors)",
-            assets=$assets_string,
-        $kwargs_string)
-        """
-    docs = """
-        # $pkg_name.jl
-
-        ```@index
-        ```
-
-        ```@autodocs
-        Modules = [$pkg_name]
-        ```
-        """
-
-    gen_file(joinpath(docs_dir, "make.jl"), make)
-    gen_integrations(p, t, pkg_name)
-    gen_file(joinpath(docs_dir, "src", "index.md"), docs)
+    # Copy any assets.
+    assets_dir = joinpath(docs_dir, "src", "assets")
+    isempty(p.assets) || mkpath(assets_dir)
+    foreach(a -> cp(a, joinpath(assets_dir, basename(asset))), p.assets)
 end
 
 function interactive(::Type{Documenter{T}}) where T
@@ -175,13 +118,7 @@ function interactive(::Type{Documenter})
     options = collect(keys(types))
     menu = RadioMenu(options)
     T = types[options[request("Documenter: Select integration:", menu)]]
-
     return interactive(Documenter{T})
 end
 
-function Base.show(io::IO, p::Documenter)
-    T = typeof(p)
-    as = length(p.assets)
-    ks = length(p.kwargs)
-    print(io, "$T: $as extra asset(s), $ks extra keyword(s)")
-end
+github_pages_url(t::Template, pkg::AbstractString) = "https://$(t.user).github.io/$pkg.jl"
